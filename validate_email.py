@@ -186,6 +186,10 @@ if __name__ == "__main__":
             validate = False
 
         timeout = raw_input('Specify timeout in seconds: [0, no timeout] ')
+        try:
+            timeout = int(timeout)
+        except:
+            timeout = 0
 
         logging.basicConfig()
 
