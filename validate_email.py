@@ -21,6 +21,7 @@ import re
 import smtplib
 import logging
 import socket
+from multiprocessing import Process, Queue
 
 try:
     import DNS
@@ -86,7 +87,7 @@ ADDR_SPEC = LOCAL_PART + r'@' + DOMAIN               # see 3.4.1
 VALID_ADDRESS_REGEXP = '^' + ADDR_SPEC + '$'
 
 
-def validate_email(email, check_mx=False, verify=False, debug=False):
+def validate_email_original(email, check_mx=False, verify=False, debug=False):
     """Indicate whether the given string is a valid email address
     according to the 'addr-spec' portion of RFC 2822 (see section
     3.4.1).  Parts of the spec that are marked obsolete are *not*
@@ -146,6 +147,27 @@ def validate_email(email, check_mx=False, verify=False, debug=False):
         return None
     return True
 
+
+def validate_email_process(q,email, check_mx, verify, debug):
+    res = validate_email(email, check_mx, verify, debug)
+    q.put(res)
+    
+
+def validate_email(email, check_mx=False, verify=False, debug=False, timeout=0):
+    if timeout > 0:
+        q = Queue()
+        p = Process(target=validate_email_process,args=(q,email,check_mx,verify,debug))
+        p.start()
+        p.join(timeout)
+        if p.is_alive():
+            p.terminate()
+            return None
+        else:
+            return q.get()
+    else:
+        return validate_email_original(email, check_mx, verify, debug)
+    
+
 if __name__ == "__main__":
     import time
     while True:
@@ -163,9 +185,13 @@ if __name__ == "__main__":
         else:
             validate = False
 
+        timeout = raw_input('Specify timeout in seconds: [0, no timeout] ')
+
         logging.basicConfig()
 
-        result = validate_email(email, mx, validate, debug=True)
+        result = validate_email(email, mx, validate, debug=True, timeout=int(timeout))
+        print "result: " + str(result)
+        
         if result:
             print "Valid!"
         elif result is None:
