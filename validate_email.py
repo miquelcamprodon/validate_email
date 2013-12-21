@@ -149,7 +149,7 @@ def validate_email_original(email, check_mx=False, verify=False, debug=False):
 
 
 def validate_email_process(q,email, check_mx, verify, debug):
-    res = validate_email(email, check_mx, verify, debug)
+    res = validate_email_original(email, check_mx, verify, debug)
     q.put(res)
     
 
